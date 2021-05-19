@@ -9,11 +9,12 @@
 (in-package :day04)
 
 (defun decode (line)
-  (multiple-value-bind (_ matches) (scan-to-strings "^(.+)-(\\d+)\\[(.+)\\]$" line)
+  (multiple-value-bind (match regs) (scan-to-strings "^(.+)-(\\d+)\\[(.+)\\]$" line)
+    (declare (ignorable match))
     (list
-      (coerce (regex-replace-all "-" (aref matches 0) " ") 'list)
-      (parse-integer (aref matches 1))
-      (aref matches 2))))
+      (coerce (aref regs 0) 'list)
+      (parse-integer (aref regs 1))
+      (aref regs 2))))
 
 (defun compare-pairs (p1 p2)
   (match (cons p1 p2)
@@ -23,8 +24,7 @@
        (unless (< n1 n2)
          (char< l1 l2))))))
 
-(defun real-room-p (room)
-  (destructuring-bind (name id checksum) room
+(defun real-room-p (name checksum)
     (nlet rec ((lst name) (map (empty-map 0)))
       (if (null lst)
         (string=
@@ -37,9 +37,9 @@
         (let ((l (car lst)))
           (rec
             (cdr lst)
-            (if (char= #\Space l)
+            (if (char= #\- l)
               map
-              (with map l (1+ (lookup map l))))))))))
+              (with map l (1+ (lookup map l)))))))))
 
 (defun shifted-name (name id)
     (let*
@@ -52,21 +52,25 @@
               (cdr name)
               (cons
                 (case l
-                  (#\Space #\Space)
+                  (#\- #\-)
                   (otherwise
                     (code-char (+ (char-code #\a) (mod (+ shift-length (- (char-code l) (char-code #\a))) 26)))))
                 shifted-name)))))))
 
-(defun find-north-pole-storage-id (rooms)
-  (destructuring-bind (name id checksum) (car rooms)
-    (if (scan "north" (shifted-name name id))
-      id
-      (find-north-pole-storage-id (cdr rooms)))))
+(defun find-answers (rooms &optional (sum 0) (storage-id nil))
+  (if (null rooms)
+    (list sum storage-id)
+    (destructuring-bind (name id checksum) (car rooms)
+      (destructuring-bind (new-sum . new-storage-id)
+        (if (real-room-p name checksum)
+          (cons
+            (+ sum id)
+            (if (and storage-id (not (scan "north" (shifted-name name id))))
+              storage-id
+              id))
+          (cons sum storage-id))
+        (find-answers (cdr rooms) new-sum new-storage-id)))))
 
 (defun main ()
-  (let*
-    ((rooms (read-input-as-list 04 #'decode))
-     (real-rooms (remove-if-not #'real-room-p rooms)))
-    (print (reduce (lambda (s r) (+ s (second r))) real-rooms :initial-value 0))
-    (print (find-north-pole-storage-id real-rooms))))
+    (dolist (a (find-answers (read-input-as-list 04 #'decode))) (print a)))
 
