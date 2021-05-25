@@ -1,19 +1,19 @@
 (defpackage :day09
   (:use :cl :aoc-misc :iterate)
-  (:import-from :cl-ppcre :scan-to-strings)
   (:export main))
 
 (in-package :day09)
 
+(defun read-integer (str &optional (value 0))
+  (destructuring-bind (fst . rst) str
+    (if (digit-char-p fst)
+      (read-integer rst (+ (* 10 value) (- (char-code fst) 48)))
+      (values value rst))))
+
 (defun read-marker (lst &optional mrk-lst)
-  (if (char= #\) (car lst))
-    (multiple-value-bind (match regs)
-      (scan-to-strings "\\((\\d+)x(\\d+)" (coerce (reverse mrk-lst) 'string))
-      (values
-        (parse-integer (aref regs 0))
-        (parse-integer (aref regs 1))
-        (cdr lst)))
-    (read-marker (cdr lst) (cons (car lst) mrk-lst))))
+  (multiple-value-bind (nchar temp-rst) (read-integer (cdr lst))
+    (multiple-value-bind (repeat rst) (read-integer temp-rst)
+      (values nchar repeat rst))))
 
 (defun drop (n lst)
   (if (zerop n)
