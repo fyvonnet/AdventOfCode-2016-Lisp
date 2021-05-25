@@ -5,29 +5,33 @@
 
 (in-package :day09)
 
+(defun read-marker (lst &optional mrk-lst)
+  (if (char= #\) (car lst))
+    (multiple-value-bind (match regs)
+      (scan-to-strings "\\((\\d+)x(\\d+)" (coerce (reverse mrk-lst) 'string))
+      (values
+        (parse-integer (aref regs 0))
+        (parse-integer (aref regs 1))
+        (cdr lst)))
+    (read-marker (cdr lst) (cons (car lst) mrk-lst))))
+
+(defun drop (n lst)
+  (if (zerop n)
+    lst
+    (drop (1- n) (cdr lst))))
+
+(defun decompress-length (lst &optional (length 0))
+  (cond
+    ((null lst) length)
+    ((char= #\( (car lst))
+     (multiple-value-bind (nchar repeat new-lst) (read-marker lst)
+       (decompress-length 
+         (drop nchar new-lst)
+         (+ length (* repeat nchar)))))
+    (t (decompress-length (cdr lst) (1+ length)))))
 
 (defun main ()
   (let
-    ((str (car (read-input-as-list 09))))
-    (iterate
-      (with ptr = 0)
-      (with length = 0)
-      (while (< ptr (length str)))
-      (if (char= #\( (aref str ptr))
-        (iterate
-          (with ptr2 = ptr)
-          (while (not (char= #\) (aref str ptr2))))
-          (incf ptr2)
-          (finally
-            (multiple-value-bind (match regs)
-              (scan-to-strings "(\\d+)x(\\d+)" (subseq str (1+ ptr) ptr2))
-              (let
-                ((nchar  (parse-integer (aref regs 0)))
-                 (repeat (parse-integer (aref regs 1))))
-                (incf length (* repeat nchar))
-                (setf ptr (+ ptr2 nchar 1))))))
-        (progn
-          (incf length)
-          (incf ptr)))
-      (finally (print length)))))
+    ((str (coerce (car (read-input-as-list 09)) 'list)))
+    (print (decompress-length str))))
 
