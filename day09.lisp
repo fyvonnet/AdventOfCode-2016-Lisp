@@ -15,23 +15,34 @@
     (multiple-value-bind (repeat rst) (read-integer temp-rst)
       (values nchar repeat rst))))
 
-(defun drop (n lst)
+(defun split (n lst &optional head)
   (if (zerop n)
-    lst
-    (drop (1- n) (cdr lst))))
+    (values lst (reverse head))
+    (split (1- n) (cdr lst) (cons (car lst) head))))
 
-(defun decompress-length (lst &optional (length 0))
+(defun decompress-length-part1 (lst &optional (length 0))
   (cond
     ((null lst) length)
     ((char= #\( (car lst))
      (multiple-value-bind (nchar repeat new-lst) (read-marker lst)
-       (decompress-length 
-         (drop nchar new-lst)
+       (decompress-length-part1 
+         (split nchar new-lst)
          (+ length (* repeat nchar)))))
-    (t (decompress-length (cdr lst) (1+ length)))))
+    (t (decompress-length-part1 (cdr lst) (1+ length)))))
+
+(defun decompress-length-part2 (lst &optional (length 0))
+  (cond
+    ((null lst) length )
+    ((char= #\( (car lst))
+     (multiple-value-bind (nchar repeat new-lst) (read-marker lst)
+       (multiple-value-bind (tail head) (split nchar new-lst)
+         (let ((sub-length (decompress-length-part2 head)))
+           (decompress-length-part2 tail (+ length (* repeat sub-length)))))))
+    (t (decompress-length-part2 (cdr lst) (1+ length)))))
 
 (defun main ()
   (let
     ((str (coerce (car (read-input-as-list 09)) 'list)))
-    (print (decompress-length str))))
+    (print (decompress-length-part1 str))
+    (print (decompress-length-part2 str))))
 
