@@ -17,43 +17,45 @@
         (coerce reqs 'list)
         (if bot-str
           (cons
-            (with graph (parse-integer bot-str)
-              (cons (list (intern  low-obj-str "KEYWORD") (parse-integer  low-num-str))
-                    (list (intern high-obj-str "KEYWORD") (parse-integer high-num-str))))
+            (with graph (cons :|bot| (parse-integer bot-str))
+              (cons (cons (intern  low-obj-str "KEYWORD") (parse-integer  low-num-str))
+                    (cons (intern high-obj-str "KEYWORD") (parse-integer high-num-str))))
             queue)
           (cons
             graph
-            (queue-snoc queue (cons (parse-integer dest-bot-str)
+            (queue-snoc queue (cons (cons :|bot| (parse-integer dest-bot-str))
                                     (parse-integer value-str)))))))))
 
 (defun sort-cons (cns)
   (destructuring-bind (a . b) cns
     (if (< a b) (cons a b) (cons b a))))
 
-(defun solve-part-one (graph queue &optional (bots-content (empty-map)))
-  (destructuring-bind (bot-num . value) (queue-head queue)
-    (match (lookup bots-content bot-num)
-      (nil (solve-part-one graph (queue-tail queue) (with bots-content bot-num value)))
-      (content
-        (match (sort-cons (cons content value))
-          ((cons 17 61) bot-num)
-          ((cons val-low val-high)
-           (destructuring-bind (dest-low . dest-high) (lookup graph bot-num)
-             (solve-part-one
-               graph
-               (reduce
-                 (lambda (q d)
-                   (destructuring-bind (dest-val dest-obj dest-num) d
-                     (if (eq dest-obj :|bot|)
-                       (queue-snoc q (cons dest-num dest-val))
-                       queue)))
-                 (mapcar #'cons (list val-low val-high) (list dest-low dest-high))
-                 :initial-value (queue-tail queue))
-               (with bots-content bot-num nil)))))))))
+(defun solve (graph queue &optional (objects-content (empty-map)))
+  (destructuring-bind (a b c) (mapcar (lambda (n) (lookup objects-content (cons :|output| n))) '(0 1 2))
+    (if (and a b c)
+      (print (* a b c))
+      (destructuring-bind (dest-id . value) (queue-head queue)
+        (match (lookup objects-content dest-id)
+          (nil (solve graph (queue-tail queue) (with objects-content dest-id value)))
+          (content
+            (match (sort-cons (cons content value))
+              ((cons val-low val-high)
+               (when (and (= val-low 17) (= val-high 61)) (print (cdr dest-id)))
+               (destructuring-bind (dest-low . dest-high) (lookup graph dest-id)
+                 (solve
+                   graph
+                   (reduce
+                     (lambda (q d)
+                       (destructuring-bind (dest-id . dest-val) d
+                         (queue-snoc q (cons dest-id dest-val))))
+                     (mapcar #'cons (list dest-low dest-high) (list val-low val-high))
+                     :initial-value (queue-tail queue))
+                   (with objects-content dest-id nil)))))))))))
 
 (defun main ()
   (destructuring-bind (graph . queue)
     (reduce 
       #'process-input (read-input-as-list 10)
       :initial-value (cons (empty-map) (empty-queue)))
-    (print (solve-part-one graph queue))))
+    (solve graph queue)))
+
