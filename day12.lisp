@@ -30,10 +30,11 @@
     ((cons :register x) (aref regs x))
     ((cons :value x) x)))
 
-(defun run-program (prg)
+(defun run-program (prg ignition)
   (let 
     ((regs (make-array 4 :initial-element 0))
      (len (length prg)))
+    (setf (aref regs 2) ignition)
     (nlet rec ((ptr 0))
       (if (>= ptr len)
         (aref regs 0)
@@ -55,4 +56,5 @@
 (defun main ()
   (let
     ((input (coerce (read-input-as-list 12 #'decode) 'vector)))
-    (print (run-program input))))
+    (dolist (ignition '(0 1)) (print (run-program input ignition)))))
+
