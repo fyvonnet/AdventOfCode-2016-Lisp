@@ -1,7 +1,7 @@
 (defpackage :day13
   (:use :cl :aoc-misc :aoc-coord)
   (:export main)
-  (:import-from :fset :empty-set :contains? :with)
+  (:import-from :fset :empty-set :contains? :with :size)
   (:import-from :trivia :match)
   (:import-from :serapeum :nlet)
   (:import-from :functional-queue :empty-queue :queue-snoc :queue-head :queue-tail))
@@ -9,7 +9,7 @@
 (in-package :day13)
 
 
-(defparameter *end-coord* (make-coord 31 39))
+(defparameter *dest-coord* (make-coord 31 39))
 
 (defun count-bits (num)
   (if (zerop num)
@@ -46,23 +46,22 @@
       (nil queue)
       (new-coord (queue-snoc queue (cons new-coord steps))))))
 
-(defun navigate-maze (fav-num)
-  (nlet rec ((queue (queue-snoc (empty-queue) (cons (make-coord 1 1) 0))) (visited (empty-set)))
-    (match (queue-head queue)
-      (nil (error "empty queue"))
-      ((cons coord steps)
-       (if (coord= coord *end-coord*)
-         steps
-         (rec
-           (reduce
-             (add-to-queue fav-num visited coord (1+ steps))
-             *all-absolute-dirs*
-             :initial-value (queue-tail queue))
-           (with visited coord)))))))
-
-
 (defun main ()
   (let
-    ((input (parse-integer (car (read-input-as-list 13)))))
-    (print (navigate-maze input))))
+    ((fav-num (parse-integer (car (read-input-as-list 13)))))
+    (nlet rec ((queue (queue-snoc (empty-queue) (cons (make-coord 1 1) 0))) (visited (empty-set)) (empty-squares nil))
+      (match (queue-head queue)
+        (nil (error "empty queue"))
+        ((cons coord steps)
+         (if (coord= coord *dest-coord*)
+           (format t "~a~%~a~%" steps empty-squares)
+           (rec
+             (reduce
+               (add-to-queue fav-num visited coord (1+ steps))
+               *all-absolute-dirs*
+               :initial-value (queue-tail queue))
+             (with visited coord)
+             (if (and (> steps 50) (null empty-squares))
+               (size visited)
+               empty-squares))))))))
 
