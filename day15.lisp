@@ -37,8 +37,7 @@
     (search-delay (update-disks disks) (1+ time))))
 
 (defun main ()
-  (let*
-    ((disks (read-input-as-list 15 #'decode))
-     (initialized-disks (initialize-disks disks 1)))
-    (print (search-delay initialized-disks 0))))
+  (let ((disks (read-input-as-list 15 #'decode)))
+    (dolist (d (list disks (append disks '((11 0)))))
+      (print (search-delay (initialize-disks d 1) 0)))))
 
