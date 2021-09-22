@@ -4,8 +4,6 @@
 
 (in-package :day16)
 
-(defparameter *disk-length* 272)
-
 (defun invert (lst &optional new-lst)
   (if (null lst)
     new-lst
@@ -17,22 +15,21 @@
           (#\1 #\0))
         new-lst))))
 
-(defun transform (lst)
-  (append
-    lst
-    '(#\0)
-    (invert lst)))
+(defun fill-disk (lst disk-length)
+  (if (>= (length lst) disk-length)
+    (subseq lst 0 disk-length)
+    (fill-disk 
+      (append lst '(#\0) (invert lst))
+      disk-length)))
 
-(defun fill-disk (lst)
-  (if (>= (length lst) *disk-length*)
-    (subseq lst 0 *disk-length*)
-    (fill-disk (transform lst))))
-
-(defun checksum-iteration (lst)
-  (unless (null lst)
-    (cons
-      (if (char= (car lst) (cadr lst)) #\1 #\0)
-      (checksum-iteration (cddr lst)))))
+(defun checksum-iteration (lst &optional new-lst)
+  (if (null lst)
+    (reverse new-lst)
+    (checksum-iteration
+      (cddr lst)
+      (cons
+        (if (char= (car lst) (cadr lst)) #\1 #\0)
+        new-lst))))
 
 (defun checksum (lst)
   (if (zerop (mod (length lst) 2))
@@ -42,5 +39,6 @@
 (defun main ()
   (let
     ((input (coerce (car (read-input-as-list 16)) 'list)))
-    (format t "~a~%" (checksum (fill-disk input)))))
+    (dolist (dl '(272 35651584))
+      (format t "~a~%" (checksum (fill-disk input dl))))))
 
