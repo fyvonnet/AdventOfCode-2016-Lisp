@@ -31,19 +31,22 @@
         str
         (rec (1- i) (md5-string str))))))
 
-(defun check-regex (regex salt index cnt)
-  (match (scan-to-strings regex (md5-multi salt index cnt))
-    (nil nil)
-    (str (char str 0))))
+(defmacro if-match-regex ((regex salt index cnt) (chr body-t) body-nil)
+  (let ((str (gensym)))
+    `(let ((,str (scan-to-strings ,regex (md5-multi ,salt ,index ,cnt))))
+       (if ,str
+         (let ((,chr (char ,str 0)))
+           ,body-t)
+         ,body-nil))))
 
 (defun search-key (salt cnt)
   (nlet rec-main
     ((start-index 1)
      (three-queue
        (nlet rec ((i 0))
-         (match (check-regex *three-regex* salt i cnt)
-           (nil (rec (1+ i)))
-           (chr (queue-snoc (empty-queue) (cons i chr))))))
+         (if-match-regex (*three-regex* salt i cnt)
+           (chr (queue-snoc (empty-queue) (cons i chr)))
+           (rec (1+ i)))))
      (five-queue (empty-queue))
      (last-index 0)
      (countdown 64))
@@ -61,16 +64,16 @@
             (nlet rec ((q3 (queue-tail three-queue)) (q5 clean-five-queue) (i start-index))
               (if (= i end-index)
                 (cons q3 q5)
-                (match (check-regex *three-regex* salt i cnt)
-                  (nil (rec q3 q5 (1+ i)))
+                (if-match-regex (*three-regex* salt i cnt)
                   (chr3 
                     (let
                       ((new-q3 (queue-snoc q3 (cons i chr3)))
                        (new-q5 
-                         (match (check-regex *five-regex* salt i cnt)
-                           (nil q5)
-                           (chr5 (queue-snoc q5 (cons i chr5))))))
-                      (rec new-q3 new-q5 (1+ i)))))))
+                         (if-match-regex (*five-regex* salt i cnt)
+                           (chr5 (queue-snoc q5 (cons i chr5)))
+                           q5)))
+                      (rec new-q3 new-q5 (1+ i))))
+                  (nil (rec q3 q5 (1+ i))))))
             (nlet rec ((q5 complete-five-queue))
               (cond
                 ((queue-empty-p q5) (rec-main end-index new-three-queue complete-five-queue 0 countdown))
