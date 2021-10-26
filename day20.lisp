@@ -1,20 +1,17 @@
 (defpackage :day20
   (:use :cl :aoc-misc)
   (:export main)
-  (:import-from :cl-ppcre :split)
-  (:import-from :serapeum :nlet)
-  (:import-from :trivia :match))
+  (:import-from :cl-ppcre :split))
 
 (in-package :day20)
 
-(defun search-holes (lst &optional (first-hole nil) (holes 0))
-  (nlet rec ((lst (cdr lst)) (maxi (1+ (cadar lst))))
-    (match lst
-      ((cons (list a b) rst)
-       (if (> a maxi)
-         (search-holes lst (if first-hole first-hole maxi) (+ holes (- a maxi)))
-         (rec rst (max (1+ b) maxi))))
-      (nil (list first-hole holes)))))
+(defun search-holes (lst &optional (maxi 0) (first-hole nil) (holes 0))
+  (if (null lst)
+    (list first-hole holes)
+    (destructuring-bind ((lo hi) &rest rst) lst
+     (if (> lo maxi)
+       (search-holes rst (1+ hi) (if first-hole first-hole maxi) (+ holes (- lo maxi)))
+       (search-holes rst (max (1+ hi) maxi) first-hole holes)))))
 
 (defun main ()
   (let
