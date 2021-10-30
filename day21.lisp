@@ -86,7 +86,7 @@
        (let ((index (find-letter-position str x)))
          (rotate-right str len (+ index (if (< index 4) 1 2))))))))
 
-(defun unscramble (str len)
+(defun unscramble (str len shifts)
   (lambda (instr)
     (match instr
       ((list 'SWAPPOS x y)      (swap-position str     x y))
@@ -97,15 +97,33 @@
       ((list 'MOVE x y)         (move          str     y x))
       ((list 'ROTBASED x)
        (let ((index (find-letter-position str x)))
-         (rotate-left str len (aref #(1 1 6 2 7 3 0 4) index)))))))
+         (rotate-left str len (aref shifts index)))))))
+
+(defun reverse-shift (letters)
+  (lambda (l)
+    (let ((str (copy-seq letters)))
+      (funcall
+        (scramble str (length str))
+        (list 'ROTBASED l))
+      (cons
+        (find-letter-position str l)
+        (find-letter-position str #\a)))))
 
 (defun main ()
-  (let
-    ((input (read-input-as-list 21 #'decode)))
-    (let ((str "abcdefgh"))
-      (mapcar (scramble   str (length str)) (identity input))
-      (format t "~a~%" str))
+  (let*
+    ((input (read-input-as-list 21 #'decode))
+     (letters "abcdefgh")
+     (shifts
+       (coerce
+         (mapcar 
+           #'cdr
+           (sort
+             (mapcar (reverse-shift letters) (coerce letters 'list))
+             (lambda (a b) (< (car a) (car b)))))
+         'vector)))
+    (mapcar (scramble letters (length letters)) input)
+    (format t "~a~%" letters)
     (let ((str "fbgdceah"))
-      (mapcar (unscramble str (length str)) (reverse  input))
+      (mapcar (unscramble str (length str) shifts) (reverse input))
       (format t "~a~%" str))))
 
