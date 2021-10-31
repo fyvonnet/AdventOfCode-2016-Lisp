@@ -9,23 +9,28 @@
   (multiple-value-bind (match regs) (scan-to-strings "^\/dev\/grid\/node-x(\\d+)-y(\\d+)\\s+(\\d+)T\\s+(\\d+)T\\s+(\\d+)T\\s+\\d+\%$" line)
     (when match (map 'list #'parse-integer regs))))
 
-(defun valid (avail used)
-  (if (and (not (zerop used)) (>= avail used)) 1 0))
+(defun compare (used-a avail-a)
+  (if (zerop used-a)
+    (lambda (cnt b)
+      (destructuring-bind (_ _ _ used-b avail-b) b
+        (if (>= avail-a used-b) (1+ cnt) cnt)))
+    (lambda (cnt b)
+      (destructuring-bind (_ _ _ used-b avail-b) b
+        (+
+          cnt
+          (if (and (not (zerop used-b)) (>= avail-a used-b)) 1 0)
+          (if (>= avail-b used-a) 1 0))))))
 
-(defun compare (a)
-  (lambda (cnt b)
-    (destructuring-bind ((_ _ _ used-a avail-a) . (_ _ _ used-b avail-b)) (cons a b)
-      (+ cnt (valid avail-a used-b) (valid avail-b used-a)))))
-
-(defun find-viable-pairs (nodes)
+(defun find-viable-pairs (nodes &optional (cnt 0))
   (if (null nodes)
-    0
-    (+
-      (reduce (compare (car nodes)) (cdr nodes) :initial-value 0)
-      (find-viable-pairs (cdr nodes)))))
+    cnt
+    (destructuring-bind (_ _ _ used-a avail-a) (car nodes)
+      (find-viable-pairs
+        (cdr nodes)
+        (reduce (compare used-a avail-a) (cdr nodes) :initial-value cnt)))))
 
 (defun main ()
   (let
-    ((input (remove-if #'null (read-input-as-list 22 #'decode)))a)
+    ((input (cddr (read-input-as-list 22 #'decode))))
     (print (find-viable-pairs input))))
 
