@@ -1,7 +1,8 @@
 (defpackage :day22
   (:use :cl :aoc-misc aoc-coord :iterate)
   (:export main)
-  (:import-from :cl-ppcre :scan-to-strings))
+  (:import-from :cl-ppcre :scan-to-strings)
+  (:import-from :trivia :match))
 
 (in-package :day22)
 
@@ -11,25 +12,30 @@
       (destructuring-bind (x y size used avail) (map 'list #'parse-integer regs)
         (list (make-coord x y) size used avail)))))
 
-(defun compare (used-a avail-a)
-  (if (zerop used-a)
-    (lambda (cnt b)
-      (destructuring-bind (_ _ used-b avail-b) b
-        (if (>= avail-a used-b) (1+ cnt) cnt)))
-    (lambda (cnt b)
-      (destructuring-bind (_ _ used-b avail-b) b
-        (+
-          cnt
-          (if (and (not (zerop used-b)) (>= avail-a used-b)) 1 0)
-          (if (>= avail-b used-a) 1 0))))))
+(defun compare-a-and-b (used-a avail-a)
+  (lambda (cnt b)
+    (destructuring-bind (_ _ used-b avail-b) b
+      (+
+        cnt
+        (if (and (>= avail-a used-b) (not (zerop used-b))) 1 0)
+        (if (>= avail-b used-a) 1 0)))))
+
+(defun compare-only-b (avail-a)
+  (lambda (cnt b)
+    (destructuring-bind (_ _ used-b _) b
+      (if (>= avail-a used-b) (1+ cnt) cnt))))
 
 (defun find-viable-pairs (nodes &optional (cnt 0))
   (if (null nodes)
     cnt
-    (destructuring-bind (_ _ used-a avail-a) (car nodes)
-      (find-viable-pairs
+    (find-viable-pairs
+      (cdr nodes)
+      (reduce
+        (match (car nodes)
+          ((list _ _      0 avail-a) (compare-only-b avail-a))
+          ((list _ _ used-a avail-a) (compare-a-and-b used-a avail-a)))
         (cdr nodes)
-        (reduce (compare used-a avail-a) (cdr nodes) :initial-value cnt)))))
+        :initial-value cnt))))
 
 (defun sort-by-coord (a b)
   (destructuring-bind ((c _ _ _) . (d _ _ _)) (cons a b)
@@ -41,5 +47,10 @@
 (defun main ()
   (let
     ((input (cddr (read-input-as-list 22 #'decode))))
-    (print (find-viable-pairs input))))
+    (print (find-viable-pairs input))
+    (let ((limits (get-coords-limits (mapcar #'car input))))
+      (print limits)
+      (print (getf limits :x-max))
+      )
+    ))
 
