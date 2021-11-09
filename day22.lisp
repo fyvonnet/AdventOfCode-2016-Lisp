@@ -48,9 +48,17 @@
   (let
     ((input (cddr (read-input-as-list 22 #'decode))))
     (print (find-viable-pairs input))
-    (let ((limits (get-coords-limits (mapcar #'car input))))
-      (print limits)
-      (print (getf limits :x-max))
-      )
-    ))
+    (let
+      ((limits (get-coords-limits (mapcar #'car input)))
+       (sorted-input (sort input #'sort-by-coord)))
+      (terpri)
+      (iterate
+        (for y from 0 to (getf limits :y-max))
+        (iterate
+          (for x from 0 to (getf limits :x-max))
+          (destructuring-bind (_ capa used _) (pop input)
+            (if (> capa 500)
+              (format t " XXXXX")
+              (format t " ~2a/~2a" used capa))))
+        (format t "~%")))))
 
