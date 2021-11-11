@@ -8,5 +8,5 @@
 (defun main ()
   (let
     ((input (coerce (read-input-as-list 12 #'decode-assembunny) 'vector)))
-    (dolist (ignition '(0 1)) (print (run-assembunny input ignition)))))
+    (dolist (ignition '(0 1)) (print (run-assembunny input (cons 2 ignition))))))
 
