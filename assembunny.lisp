@@ -30,7 +30,7 @@
     ((cons :register x) (aref regs x))
     ((cons :value x) x)))
 
-(defun run-assembunny (prg ignition)
+(defun run-assembunny (prg &optional (ignition 0))
   (let 
     ((regs (make-array 4 :initial-element 0))
      (len (length prg)))
