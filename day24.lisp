@@ -1,7 +1,7 @@
 (defpackage :day24
   (:use :cl :aoc-misc :aoc-coord)
   (:export main)
-  (:import-from :fset :empty-set :contains?)
+  (:import-from :alexandria :copy-array)
   (:import-from :functional-queue :empty-queue :queue-head :queue-tail :queue-snoc)
   (:import-from :permutations :permutations)
   (:import-from :serapeum :nlet)
@@ -18,27 +18,30 @@
            (< y (array-dimension maze-map 0)))
       (aref maze-map y x))))
 
-(defun explore-maze (matrix maze-map current-digit queue remaind visited)
-  (unless (zerop remaind)
+(defun explore-maze (matrix maze-map current-digit queue remain)
+  (unless (zerop remain)
     (destructuring-bind (steps . coord) (queue-head queue)
-      (let
-        ((next-coords
-           (remove-if-not
-             (lambda (c) (and (aref-coord maze-map c) (not (contains? visited c))))
-             (mapcar (lambda (d) (next-coord d coord)) *all-absolute-dirs*))))
-        (explore-maze
-          matrix
-          maze-map
-          current-digit
-          (reduce
-            (lambda (q c) (queue-snoc q (cons (1+ steps) c)))
-            next-coords :initial-value (queue-tail queue))
-          (match (aref-coord maze-map coord)
-            (t remaind)
-            (found-digit
-              (setf (aref matrix current-digit found-digit) steps)
-              (1- remaind)))
-          (reduce #'fset:with next-coords :initial-value visited))))))
+      (destructuring-bind (new-queue . new-remain)
+        (reduce
+          (lambda (data dir)
+            (destructuring-bind (q . r) data
+              (let*
+                ((neighb-coord (next-coord dir coord))
+                 (neighb-value (aref-coord maze-map neighb-coord)))
+                (if neighb-value
+                  (progn
+                    (setf (aref maze-map (get-y neighb-coord) (get-x neighb-coord)) nil)
+                    (cons
+                      (queue-snoc q (cons (1+ steps) neighb-coord))
+                      (match neighb-value
+                        (t remain)
+                        (found-digit
+                          (setf (aref matrix current-digit found-digit) (1+ steps))
+                          (1- remain)))))
+                  data))))
+          *all-absolute-dirs*
+          :initial-value (cons (queue-tail queue) remain))
+        (explore-maze matrix maze-map current-digit new-queue new-remain)))))
 
 (defun process-maze-map (maze-map)
   (let*
@@ -73,7 +76,9 @@
     (nlet rec ((lst digits))
       (unless (null lst)
         (destructuring-bind (i . coord) (car lst)
-          (explore-maze matrix maze-map i (queue-snoc (empty-queue) (cons 0 coord)) ndigits (fset:with (empty-set) coord))
+          (let ((maze-map-copy (copy-array maze-map)))
+            (setf (aref maze-map-copy (get-y coord) (get-x coord)) nil)
+            (explore-maze matrix maze-map-copy i (queue-snoc (empty-queue) (cons 0 coord)) (1- ndigits)))
           (rec (cdr lst)))))
     (let
       ((dists
