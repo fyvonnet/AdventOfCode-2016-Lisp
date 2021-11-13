@@ -21,25 +21,24 @@
 (defun explore-maze (matrix maze-map current-digit queue remaind visited)
   (unless (zerop remaind)
     (destructuring-bind (steps . coord) (queue-head queue)
-      (let ((neighbor-coord (mapcar (lambda (d) (next-coord d coord)) *all-absolute-dirs*)))
+      (let
+        ((next-coords
+           (remove-if-not
+             (lambda (c) (and (aref-coord maze-map c) (not (contains? visited c))))
+             (mapcar (lambda (d) (next-coord d coord)) *all-absolute-dirs*))))
         (explore-maze
           matrix
           maze-map
           current-digit
           (reduce
-            (lambda (q c)
-              (if (and (not (contains? visited c))
-                       (aref-coord maze-map c))
-                (queue-snoc q (cons (1+ steps) c))
-                q))
-            neighbor-coord
-            :initial-value (queue-tail queue))
+            (lambda (q c) (queue-snoc q (cons (1+ steps) c)))
+            next-coords :initial-value (queue-tail queue))
           (match (aref-coord maze-map coord)
             (t remaind)
-            (d
-              (setf (aref matrix current-digit d) steps)
+            (found-digit
+              (setf (aref matrix current-digit found-digit) steps)
               (1- remaind)))
-          (reduce #'fset:with neighbor-coord :initial-value visited))))))
+          (reduce #'fset:with next-coords :initial-value visited))))))
 
 (defun measure-distances (matrix maze-map digits)
   (nlet rec ((lst digits))
