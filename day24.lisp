@@ -48,32 +48,34 @@
         (explore-maze matrix maze-map i (queue-snoc (empty-queue) (cons 0 coord)) (length digits) (fset:with (empty-set) coord))
         (rec (cdr lst))))))
 
+(defun process-maze-map (maze-map)
+  (let*
+    ((maze-width (array-dimension maze-map 1))
+     (maze-nsquares (* maze-width (array-dimension maze-map 0))))
+    (nlet rec ((i 0) (digits nil))
+      (if (= i maze-nsquares)
+        (sort digits (lambda (a b) (< (car a) (car b))))
+        (multiple-value-bind (y x) (floor i maze-width)
+          (rec
+            (1+ i)
+            (let ((c (aref maze-map y x)))
+              (cond
+                ((char= c #\#)
+                 (setf (aref maze-map y x) nil)
+                 digits)
+                ((char= c #\.)
+                 (setf (aref maze-map y x) t  )
+                 digits)
+                ((digit-char-p c)
+                 (let ((i (parse-integer (string c))))
+                   (setf (aref maze-map y x) i)
+                   (cons (cons (parse-integer (string c)) (make-coord x y)) digits)))
+                (otherwise (error (format nil "Wrong character: ~a~%" c)))))))))))
+
 (defun main ()
   (let*
     ((maze-map (read-input-as-array 24 #'identity))
-     (digits
-       (let*
-         ((maze-width (array-dimension maze-map 1))
-          (maze-nsquares (* maze-width (array-dimension maze-map 0))))
-         (nlet rec ((i 0) (digits nil))
-           (if (= i maze-nsquares)
-             (sort digits (lambda (a b) (< (car a) (car b))))
-             (multiple-value-bind (y x) (floor i maze-width)
-               (rec
-                 (1+ i)
-                 (let ((c (aref maze-map y x)))
-                   (cond
-                     ((char= c #\#)
-                      (setf (aref maze-map y x) nil)
-                      digits)
-                     ((char= c #\.)
-                      (setf (aref maze-map y x) t  )
-                      digits)
-                     ((digit-char-p c)
-                      (let ((i (parse-integer (string c))))
-                        (setf (aref maze-map y x) i)
-                        (cons (cons (parse-integer (string c)) (make-coord x y)) digits)))
-                     (otherwise (error (format nil "Wrong character: ~a~%" c)))))))))))
+     (digits (process-maze-map maze-map))
      (len (length digits))
      (matrix (make-array `(,len ,len) :initial-element 0)))
     (measure-distances matrix maze-map digits)
