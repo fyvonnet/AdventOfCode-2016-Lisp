@@ -3,6 +3,7 @@
   (:export main)
   (:import-from :fset :empty-set :contains?)
   (:import-from :functional-queue :empty-queue :queue-head :queue-tail :queue-snoc)
+  (:import-from :permutations :permutations)
   (:import-from :serapeum :nlet)
   (:import-from :trivia :match))
 
@@ -46,22 +47,6 @@
       (destructuring-bind (i . coord) (car lst)
         (explore-maze matrix maze-map i (queue-snoc (empty-queue) (cons 0 coord)) (length digits) (fset:with (empty-set) coord))
         (rec (cdr lst))))))
-
-(defun permutations (bag)
-  "Return a list of all the permutations of the input."
-  ;; If the input is nil, there is only one permutation:
-  ;; nil itself
-  (if (null bag)
-    '(())
-    ;; Otherwise, take an element, e, out of the bag.
-    ;; Generate all permutations of the remaining elements,
-    ;; And add e to the front of each of these.
-    ;; Do this for all possible e to generate all permutations.
-    (mapcan #'(lambda (e)
-                (mapcar #'(lambda (p) (cons e p))
-                        (permutations
-                          (remove e bag :count 1 :test #'eq))))
-            bag))) 
 
 (defun main ()
   (let*
