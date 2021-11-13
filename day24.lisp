@@ -67,12 +67,26 @@
                    (cons (cons (parse-integer (string c)) (make-coord x y)) digits)))
                 (otherwise (error (format nil "Wrong character: ~a~%" c)))))))))))
 
+(defun find-shortest-path (matrix paths &optional (shortest-path 9999))
+  (if (null paths)
+    shortest-path
+    (find-shortest-path
+      matrix
+      (cdr paths)
+      (nlet rec ((path (car paths)) (len 0))
+        (if (= 1 (length path))
+          (min len shortest-path)
+          (rec
+            (cdr path)
+            (+ len (aref matrix (first path) (second path)))))))))
+
 (defun main ()
   (let*
     ((maze-map (read-input-as-array 24 #'identity))
      (digits (process-maze-map maze-map))
      (ndigits (length digits))
      (matrix (make-array `(,ndigits ,ndigits) :initial-element 0)))
+
     (nlet rec ((lst digits))
       (unless (null lst)
         (destructuring-bind (i . coord) (car lst)
@@ -80,10 +94,11 @@
             (setf (aref maze-map-copy (get-y coord) (get-x coord)) nil)
             (explore-maze matrix maze-map-copy i (queue-snoc (empty-queue) (cons 0 coord)) (1- ndigits)))
           (rec (cdr lst)))))
-    (let
-      ((dists
-         (mapcar
-           (lambda (p) (nlet rec ((lst p) (ln 0)) (if (= 1 (length lst)) ln (rec (cdr lst) (+ ln (aref matrix (first lst) (second lst)))))))
-           (mapcar (lambda (x) (cons 0 x)) (permutations (mapcar #'car (cdr digits)))))))
-      (print (reduce #'min (cdr dists) :initial-value (car dists))))))
+
+    (let*
+      ((perms (permutations (mapcar #'car (cdr digits))))
+       (paths-part-1 (mapcar (lambda (p) (cons 0 p)) perms))
+       (paths-part-2 (mapcar (lambda (p) (append p '(0))) paths-part-1)))
+      (dolist (p `(,paths-part-1 ,paths-part-2))
+        (print (find-shortest-path matrix p))))))
 
