@@ -40,13 +40,6 @@
               (1- remaind)))
           (reduce #'fset:with next-coords :initial-value visited))))))
 
-(defun measure-distances (matrix maze-map digits)
-  (nlet rec ((lst digits))
-    (unless (null lst)
-      (destructuring-bind (i . coord) (car lst)
-        (explore-maze matrix maze-map i (queue-snoc (empty-queue) (cons 0 coord)) (length digits) (fset:with (empty-set) coord))
-        (rec (cdr lst))))))
-
 (defun process-maze-map (maze-map)
   (let*
     ((maze-width (array-dimension maze-map 1))
@@ -75,9 +68,13 @@
   (let*
     ((maze-map (read-input-as-array 24 #'identity))
      (digits (process-maze-map maze-map))
-     (len (length digits))
-     (matrix (make-array `(,len ,len) :initial-element 0)))
-    (measure-distances matrix maze-map digits)
+     (ndigits (length digits))
+     (matrix (make-array `(,ndigits ,ndigits) :initial-element 0)))
+    (nlet rec ((lst digits))
+      (unless (null lst)
+        (destructuring-bind (i . coord) (car lst)
+          (explore-maze matrix maze-map i (queue-snoc (empty-queue) (cons 0 coord)) ndigits (fset:with (empty-set) coord))
+          (rec (cdr lst)))))
     (let
       ((dists
          (mapcar
