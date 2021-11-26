@@ -18,27 +18,30 @@
            (< y (array-dimension maze-map 0)))
       (aref maze-map y x))))
 
+(defun add-coords (matrix maze-map current-digit coord steps)
+  (lambda (data dir)
+    (destructuring-bind (q . r) data
+      (let*
+        ((neighb-coord (next-coord dir coord))
+         (neighb-value (aref-coord maze-map neighb-coord)))
+        (if neighb-value
+          (progn
+            (setf (aref maze-map (get-y neighb-coord) (get-x neighb-coord)) nil)
+            (cons
+              (queue-snoc q (cons (1+ steps) neighb-coord))
+              (match neighb-value
+                (t r)
+                (found-digit
+                  (setf (aref matrix current-digit found-digit) (1+ steps))
+                  (1- r)))))
+          data)))))
+
 (defun explore-maze (matrix maze-map current-digit queue remain)
   (unless (zerop remain)
     (destructuring-bind (steps . coord) (queue-head queue)
       (destructuring-bind (new-queue . new-remain)
         (reduce
-          (lambda (data dir)
-            (destructuring-bind (q . r) data
-              (let*
-                ((neighb-coord (next-coord dir coord))
-                 (neighb-value (aref-coord maze-map neighb-coord)))
-                (if neighb-value
-                  (progn
-                    (setf (aref maze-map (get-y neighb-coord) (get-x neighb-coord)) nil)
-                    (cons
-                      (queue-snoc q (cons (1+ steps) neighb-coord))
-                      (match neighb-value
-                        (t remain)
-                        (found-digit
-                          (setf (aref matrix current-digit found-digit) (1+ steps))
-                          (1- remain)))))
-                  data))))
+          (add-coords matrix maze-map current-digit coord steps)
           *all-absolute-dirs*
           :initial-value (cons (queue-tail queue) remain))
         (explore-maze matrix maze-map current-digit new-queue new-remain)))))
