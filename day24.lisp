@@ -9,15 +9,6 @@
 
 (in-package :day24)
 
-(defun aref-coord (maze-map coord)
-  (destructuring-bind (x . y) coord
-    (when 
-      (and (>= x 0)
-           (>= y 0)
-           (< x (array-dimension maze-map 1))
-           (< y (array-dimension maze-map 0)))
-      (aref maze-map y x))))
-
 (defun add-coords (matrix maze-map current-digit coord steps)
   (lambda (data dir)
     (destructuring-bind (q . r) data
@@ -26,7 +17,7 @@
          (neighb-value (aref-coord maze-map neighb-coord)))
         (if neighb-value
           (progn
-            (setf (aref maze-map (get-y neighb-coord) (get-x neighb-coord)) nil)
+            (setf (aref-coord maze-map neighb-coord) nil)
             (cons
               (queue-snoc q (cons (1+ steps) neighb-coord))
               (match neighb-value
@@ -94,7 +85,7 @@
       (unless (null lst)
         (destructuring-bind (i . coord) (car lst)
           (let ((maze-map-copy (copy-array maze-map)))
-            (setf (aref maze-map-copy (get-y coord) (get-x coord)) nil)
+            (setf (aref-coord maze-map-copy coord) nil)
             (explore-maze matrix maze-map-copy i (queue-snoc (empty-queue) (cons 0 coord)) (1- ndigits)))
           (rec (cdr lst)))))
 
