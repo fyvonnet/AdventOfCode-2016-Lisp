@@ -37,29 +37,20 @@
           :initial-value (cons (queue-tail queue) remain))
         (explore-maze matrix maze-map current-digit new-queue new-remain)))))
 
-(defun process-maze-map (maze-map)
-  (let*
-    ((maze-width (array-dimension maze-map 1))
-     (maze-nsquares (* maze-width (array-dimension maze-map 0))))
-    (nlet rec ((i 0) (digits nil))
-      (if (= i maze-nsquares)
-        (sort digits (lambda (a b) (< (car a) (car b))))
-        (multiple-value-bind (y x) (floor i maze-width)
-          (rec
-            (1+ i)
-            (let ((c (aref maze-map y x)))
-              (cond
-                ((char= c #\#)
-                 (setf (aref maze-map y x) nil)
-                 digits)
-                ((char= c #\.)
-                 (setf (aref maze-map y x) t  )
-                 digits)
-                ((digit-char-p c)
-                 (let ((i (parse-integer (string c))))
-                   (setf (aref maze-map y x) i)
-                   (cons (cons (parse-integer (string c)) (make-coord x y)) digits)))
-                (otherwise (error (format nil "Wrong character: ~a~%" c)))))))))))
+(defun process-maze-map (maze-map coord digits)
+  (let ((c (aref-coord maze-map coord)))
+    (cond
+      ((char= c #\#)
+       (setf (aref-coord maze-map coord) nil)
+       digits)
+      ((char= c #\.)
+       (setf (aref-coord maze-map coord) t  )
+       digits)
+      ((digit-char-p c)
+       (let ((i (parse-integer (string c))))
+         (setf (aref-coord maze-map coord) i)
+         (cons (cons i coord) digits)))
+      (otherwise (error (format nil "Wrong character: ~a~%" c))))))
 
 (defun find-shortest-path (matrix paths &optional (shortest-path 9999))
   (if (null paths)
@@ -77,7 +68,7 @@
 (defun main ()
   (let*
     ((maze-map (read-input-as-array 24 #'identity))
-     (digits (process-maze-map maze-map))
+     (digits (scan-matrix #'process-maze-map maze-map))
      (ndigits (length digits))
      (matrix (make-array `(,ndigits ,ndigits) :initial-element 0)))
 
@@ -90,7 +81,7 @@
           (rec (cdr lst)))))
 
     (let*
-      ((perms (permutations (mapcar #'car (cdr digits))))
+      ((perms (permutations (remove-if #'zerop (mapcar #'car digits))))
        (paths-part-1 (mapcar (lambda (p) (cons 0 p)) perms))
        (paths-part-2 (mapcar (lambda (p) (append p '(0))) paths-part-1)))
       (dolist (p `(,paths-part-1 ,paths-part-2))
