@@ -52,15 +52,17 @@
          (cons (cons i coord) digits)))
       (otherwise (error (format nil "Wrong character: ~a~%" c))))))
 
-(defun find-shortest-path (matrix paths &optional (shortest-path 9999))
+(defun find-shortest-paths (matrix paths &optional (shortest-paths (list 9999 9999)))
   (if (null paths)
-    shortest-path
-    (find-shortest-path
+    shortest-paths
+    (find-shortest-paths
       matrix
       (cdr paths)
       (nlet rec ((path (car paths)) (len 0))
         (if (= 1 (length path))
-          (min len shortest-path)
+          (list 
+            (min len (first shortest-paths))
+            (min (+ len (aref matrix 0 (car path))) (second shortest-paths)))
           (rec
             (cdr path)
             (+ len (aref matrix (first path) (second path)))))))))
@@ -80,10 +82,12 @@
             (explore-maze matrix maze-map-copy i (queue-snoc (empty-queue) (cons 0 coord)) (1- ndigits)))
           (rec (cdr lst)))))
 
-    (let*
-      ((perms (permutations (remove-if #'zerop (mapcar #'car digits))))
-       (paths-part-1 (mapcar (lambda (p) (cons 0 p)) perms))
-       (paths-part-2 (mapcar (lambda (p) (append p '(0))) paths-part-1)))
-      (dolist (p `(,paths-part-1 ,paths-part-2))
-        (print (find-shortest-path matrix p))))))
+    (dolist
+      (answer
+        (find-shortest-paths
+          matrix
+          (mapcar
+            (lambda (p) (cons 0 p))
+            (permutations (remove-if #'zerop (mapcar #'car digits))))))
+      (format t "~d~%" answer))))
 
