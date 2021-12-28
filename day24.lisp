@@ -70,13 +70,11 @@
      (ndigits (length digits))
      (matrix (make-array `(,ndigits ,ndigits) :initial-element 0)))
 
-    (nlet rec ((lst digits))
-      (unless (null lst)
-        (destructuring-bind (i . coord) (car lst)
-          (let ((maze-map-copy (copy-array maze-map)))
-            (setf (aref-coord maze-map-copy coord) nil)
-            (explore-maze matrix maze-map-copy i (queue-snoc (empty-queue) (cons 0 coord)) (1- ndigits)))
-          (rec (cdr lst)))))
+    (loop for d in digits doing
+      (destructuring-bind (i . coord) d
+        (let ((maze-map-copy (copy-array maze-map)))
+          (setf (aref-coord maze-map-copy coord) nil)
+          (explore-maze matrix maze-map-copy i (queue-snoc (empty-queue) (cons 0 coord)) (1- ndigits)))))
 
     (dolist
       (answer
