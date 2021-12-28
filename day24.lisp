@@ -9,7 +9,9 @@
 
 (in-package :day24)
 
-(defun explore-maze (matrix maze-map current-digit queue remain)
+(defvar matrix)
+
+(defun explore-maze (maze-map current-digit queue remain)
   (unless (zerop remain)
     (destructuring-bind (steps . coord) (queue-head queue)
       (for/fold
@@ -31,7 +33,7 @@
                     (1- new-remain)))))
             (values new-queue new-remain)))
         :result
-        (explore-maze matrix maze-map current-digit new-queue new-remain)))))
+        (explore-maze maze-map current-digit new-queue new-remain)))))
 
 (defun process-maze-map (maze-map coord digits)
   (let ((c (aref-coord maze-map coord)))
@@ -48,11 +50,10 @@
          (cons (cons i coord) digits)))
       (otherwise (error (format nil "Wrong character: ~a~%" c))))))
 
-(defun find-shortest-paths (matrix paths &optional (shortest-paths (list 9999 9999)))
+(defun find-shortest-paths (paths &optional (shortest-paths (list 9999 9999)))
   (if (null paths)
     shortest-paths
     (find-shortest-paths
-      matrix
       (cdr paths)
       (nlet rec ((path (car paths)) (len 0))
         (if (= 1 (length path))
@@ -67,19 +68,19 @@
   (let*
     ((maze-map (read-input-as-array 24 #'identity))
      (digits (scan-matrix #'process-maze-map maze-map))
-     (ndigits (length digits))
-     (matrix (make-array `(,ndigits ,ndigits) :initial-element 0)))
+     (ndigits (length digits)))
+
+    (setf matrix (make-array `(,ndigits ,ndigits) :initial-element 0))
 
     (loop for d in digits doing
       (destructuring-bind (i . coord) d
         (let ((maze-map-copy (copy-array maze-map)))
           (setf (aref-coord maze-map-copy coord) nil)
-          (explore-maze matrix maze-map-copy i (queue-snoc (empty-queue) (cons 0 coord)) (1- ndigits)))))
+          (explore-maze maze-map-copy i (queue-snoc (empty-queue) (cons 0 coord)) (1- ndigits)))))
 
     (dolist
       (answer
         (find-shortest-paths
-          matrix
           (mapcar
             (lambda (p) (cons 0 p))
             (permutations (remove-if #'zerop (mapcar #'car digits))))))
