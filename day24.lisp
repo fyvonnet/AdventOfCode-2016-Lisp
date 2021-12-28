@@ -1,5 +1,5 @@
 (defpackage :day24
-  (:use :cl :aoc-misc :aoc-coord)
+  (:use :cl :aoc-misc :aoc-coord :forfuncs)
   (:export main)
   (:import-from :alexandria :copy-array)
   (:import-from :functional-queue :empty-queue :queue-head :queue-tail :queue-snoc)
@@ -9,32 +9,28 @@
 
 (in-package :day24)
 
-(defun add-coords (matrix maze-map current-digit coord steps)
-  (lambda (data dir)
-    (destructuring-bind (q . r) data
-      (let*
-        ((neighb-coord (next-coord dir coord))
-         (neighb-value (aref-coord maze-map neighb-coord)))
-        (if neighb-value
-          (progn
-            (setf (aref-coord maze-map neighb-coord) nil)
-            (cons
-              (queue-snoc q (cons (1+ steps) neighb-coord))
-              (match neighb-value
-                (t r)
-                (found-digit
-                  (setf (aref matrix current-digit found-digit) (1+ steps))
-                  (1- r)))))
-          data)))))
-
 (defun explore-maze (matrix maze-map current-digit queue remain)
   (unless (zerop remain)
     (destructuring-bind (steps . coord) (queue-head queue)
-      (destructuring-bind (new-queue . new-remain)
-        (reduce
-          (add-coords matrix maze-map current-digit coord steps)
-          *all-absolute-dirs*
-          :initial-value (cons (queue-tail queue) remain))
+      (for/fold
+        ((new-queue (queue-tail queue))
+         (new-remain remain))
+        ((dir *all-absolute-dirs*))
+        (let*
+          ((neighb-coord (next-coord dir coord))
+           (neighb-value (aref-coord maze-map neighb-coord)))
+          (if neighb-value
+            (progn
+              (setf (aref-coord maze-map neighb-coord) nil)
+              (values
+                (queue-snoc new-queue (cons (1+ steps) neighb-coord))
+                (match neighb-value
+                  (t new-remain)
+                  (found-digit
+                    (setf (aref matrix current-digit found-digit) (1+ steps))
+                    (1- new-remain)))))
+            (values new-queue new-remain)))
+        :result
         (explore-maze matrix maze-map current-digit new-queue new-remain)))))
 
 (defun process-maze-map (maze-map coord digits)
