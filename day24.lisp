@@ -1,15 +1,15 @@
 (defpackage :day24
-  (:use :cl :aoc-misc :aoc-coord :forfuncs)
+  (:use :cl :aoc-misc :aoc-coord :forfuncs :leftist-heap)
   (:export main)
   (:import-from :alexandria :copy-array)
   (:import-from :functional-queue :empty-queue :queue-head :queue-tail :queue-snoc)
-  (:import-from :permutations :permutations)
   (:import-from :serapeum :nlet)
   (:import-from :trivia :match))
 
 (in-package :day24)
 
 (defvar matrix)
+(defvar all-digits)
 
 (defun explore-maze (maze-map current-digit queue remain)
   (unless (zerop remain)
@@ -50,27 +50,38 @@
          (cons (cons i coord) digits)))
       (otherwise (error (format nil "Wrong character: ~a~%" c))))))
 
-(defun find-shortest-paths (paths &optional (shortest-paths (list 9999 9999)))
-  (if (null paths)
-    shortest-paths
-    (find-shortest-paths
-      (cdr paths)
-      (nlet rec ((path (car paths)) (len 0))
-        (if (= 1 (length path))
-          (list 
-            (min len (first shortest-paths))
-            (min (+ len (aref matrix 0 (car path))) (second shortest-paths)))
-          (rec
-            (cdr path)
-            (+ len (aref matrix (first path) (second path)))))))))
+(defun compare (a b)
+  (< (fourth a) (fourth b)))
+
+(defun find-shortest-path (&optional (heap (leftist-insert (list 0 '(0) 0 0) nil #'compare)) (part2 nil))
+  (destructuring-bind (node visited found dist) (leftist-find-min heap)
+    (cond
+      ((= (1- (length all-digits)) found)
+       (if part2
+         (find-shortest-path
+           (leftist-insert
+             (list 0 nil 8 (+ dist (aref matrix 0 (car visited))))
+             (leftist-delete-min heap #'compare)
+             #'compare) t)
+         (progn
+           (format t "~D~%" dist)
+           (find-shortest-path heap t))))
+      ((= (length all-digits) found) (format t "~D~%" dist))
+      (t
+        (for/fold
+          ((new-heap (leftist-delete-min heap #'compare)))
+          ((n (set-difference all-digits visited)))
+          (leftist-insert (list n (cons n visited) (1+ found) (+ dist (aref matrix node n))) new-heap #'compare)
+          :result (find-shortest-path new-heap part2))))))
 
 (defun main ()
   (let*
-    ((maze-map (read-input-as-array 24 #'identity))
+    ((maze-map (read-input-as-array 24))
      (digits (scan-matrix #'process-maze-map maze-map))
      (ndigits (length digits)))
 
     (setf matrix (make-array `(,ndigits ,ndigits) :initial-element 0))
+    (setf all-digits (loop for i below ndigits collect i))
 
     (loop for d in digits doing
       (destructuring-bind (i . coord) d
@@ -78,11 +89,5 @@
           (setf (aref-coord maze-map-copy coord) nil)
           (explore-maze maze-map-copy i (queue-snoc (empty-queue) (cons 0 coord)) (1- ndigits)))))
 
-    (dolist
-      (answer
-        (find-shortest-paths
-          (mapcar
-            (lambda (p) (cons 0 p))
-            (permutations (remove-if #'zerop (mapcar #'car digits))))))
-      (format t "~d~%" answer))))
+    (find-shortest-path)))
 
